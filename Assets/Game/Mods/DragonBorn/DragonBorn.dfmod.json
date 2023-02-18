@@ -1,0 +1,12 @@
+{
+    "ModTitle": "DragonBorn",
+    "ModVersion": "0.1",
+    "ModAuthor": "General_101",
+    "DFUnity_Version": "0.14.5",
+    "ModDescription": "Shouts as seen in TES: Skyrim",
+    "GUID": "3e22ae4a-71da-45a3-bef3-2551215b2d91",
+    "Files": [
+        "Assets/Game/Mods/DragonBorn/DragonBorn.cs",
+        "Assets/Game/Mods/DragonBorn/DragonBorn.dfmod.json"
+    ]
+}
