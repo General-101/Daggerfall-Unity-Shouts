@@ -56,7 +56,6 @@ namespace DragonBorn
         int playerLayerMask = 0;
         GameObject player;
         public CharacterController controller;
-        float shoutStartTime;
         EnemyMotor enemyMotor;
         PlayerGroundMotor groundMotor;
         DaggerfallEntityBehaviour playerEntity;
@@ -67,9 +66,11 @@ namespace DragonBorn
         int prevSelectedIndex = 0;
         int knockback = 0;
         int speedMulti = 0;
-        float timer = 0.0f;
-        int cooldown = 0;
-        bool chargingShout = false;
+        float chargeTimer;
+        float cooldownTimer;
+        float shoutTimer;
+        float cooldown;
+        bool chargingShout;
         RaycastHit hit;
         bool hitSomething = false;
         DaggerfallMissile ArrowMissilePrefab;
@@ -125,35 +126,61 @@ namespace DragonBorn
 
         public void Update()
         {
-            if (!Input.GetKeyDown(KeyCode.Tab))
+            if (!chargingShout)
             {
                 SetWordIndex();
             }
 
-			if (Input.GetKeyDown(KeyCode.Tab))
-			{
-                shoutStartTime = Time.time;
-                printWordofPower(selectedWord.word_A);
-                cooldown = selectedWord.cooldown_A;
-                chargingShout = true;
-            }
-            if(Input.GetKeyUp(KeyCode.Tab) && chargingShout)
+            if (cooldown == 0.0f)
             {
-                prevSelectedIndex = selectedIndex;
-                chargingShout = false;
-                DoShout();
-            } 
-
-            if (knockback !=0)
-            {
-                if (hitSomething)
+                if (Input.GetKeyDown(KeyCode.Tab))
                 {
-                    DaggerfallEntityBehaviour entityBehaviour = hit.transform.GetComponent<DaggerfallEntityBehaviour>();
-                    EnemyMotor enemyMotor = hit.transform.GetComponent<EnemyMotor>();
-                    // Knock back enemy based on damage and enemy weight
-                    EnemyEntity enemyEntity = entityBehaviour.Entity as EnemyEntity;
-                    if (enemyMotor)
+                    printWordofPower(selectedWord.word_A);
+                    cooldown = selectedWord.cooldown_A;
+                    chargingShout = true;
+                }
+            }
+            else
+            {
+                if (chargingShout)
+                {
+                    chargeTimer += Time.deltaTime;
+                    if (Input.GetKeyUp(KeyCode.Tab))
                     {
+                        prevSelectedIndex = selectedIndex;
+                        DoShout();
+                        chargingShout = false;
+                        chargeTimer = 0.0f;
+                    }
+                }
+                else
+                {
+                    cooldownTimer += Time.deltaTime;
+                    if (cooldownTimer > cooldown)
+                    {
+                        cooldownTimer =  0.0f;
+                        cooldown = 0.0f;
+                    }
+                }
+            }
+
+            if (knockback != 0)
+            {
+                shoutTimer += Time.deltaTime;
+                if (shoutTimer > 2.0f)
+                {
+                    knockback = 0;
+                    shoutTimer = 0.0f;
+                    hitSomething = false;
+                }
+                else
+                {
+                    EnemyMotor enemyMotor = hit.transform.GetComponent<EnemyMotor>();
+                    DaggerfallEntityBehaviour entityBehaviour = hit.transform.GetComponent<DaggerfallEntityBehaviour>();
+                    if (hitSomething && enemyMotor && entityBehaviour)
+                    {
+                        // Knock back enemy based on damage and enemy weight
+                        EnemyEntity enemyEntity = entityBehaviour.Entity as EnemyEntity;
                         if (enemyMotor.KnockbackSpeed <= (5 / (PlayerSpeedChanger.classicToUnitySpeedUnitRatio / 10)) &&
                             entityBehaviour.EntityType == EntityTypes.EnemyClass ||
                             enemyEntity.MobileEnemy.Weight > 0)
@@ -172,23 +199,19 @@ namespace DragonBorn
                             enemyMotor.KnockbackDirection =  playerCamera.transform.forward;
                         }
                     }
-                    timer += Time.deltaTime;
-                    if (timer > 2.0f)
-                    {
-                        knockback = 0;
-                        timer = 0;
-                        hitSomething = false;
-                    }
                 }
             }
             else if (speedMulti != 0)
             {
-                groundMotor.MoveWithMovingPlatform(playerCamera.transform.forward * speedMulti);
-                timer += Time.deltaTime;
-                if (timer > 0.5f)
+                shoutTimer += Time.deltaTime;
+                if (shoutTimer > 0.5f)
                 {
                     speedMulti = 0;
-                    timer = 0;
+                    shoutTimer = 0.0f;
+                }
+                else
+                {
+                    groundMotor.MoveWithMovingPlatform(playerCamera.transform.forward * speedMulti);
                 }
             }
         }
@@ -226,15 +249,14 @@ namespace DragonBorn
 
         private void DoShout()
         {
-            float seconds = (Time.time - shoutStartTime);
             int level = 0;
-            if (seconds > 0.4f)
+            if (chargeTimer > 0.4f)
             {
                 printWordofPower(selectedWord.word_B);
                 cooldown = selectedWord.cooldown_B;
                 level = 1;
             }
-            if (seconds > 0.8f)
+            if (chargeTimer > 0.8f)
             {
                 printWordofPower(selectedWord.word_C);
                 cooldown = selectedWord.cooldown_C;
@@ -327,6 +349,22 @@ namespace DragonBorn
 
             GameManager.Instance.EntityEffectBroker.GetClassicSpellRecord(16, out spell);
             GameManager.Instance.EntityEffectBroker.ClassicSpellRecordDataToEffectBundleSettings(spell, BundleTypes.Spell, out bundleSettings);
+
+            for (int i = 0; i < bundleSettings.Effects.Length; i++)
+            {
+                EffectEntry effect = bundleSettings.Effects[i];
+                effect.Settings.DurationBase = 9999;
+                effect.Settings.DurationPlus = 9999;
+                effect.Settings.DurationPerLevel = 9999;
+                effect.Settings.ChanceBase = 9999;
+                effect.Settings.ChancePlus = 9999;
+                effect.Settings.ChancePerLevel = 9999;
+                effect.Settings.MagnitudeBaseMin = 9999;
+                effect.Settings.MagnitudeBaseMax = 9999;
+                effect.Settings.MagnitudePlusMin = 9999;
+                effect.Settings.MagnitudePlusMax = 9999;
+                effect.Settings.MagnitudePerLevel = 9999;
+            }
 
             DaggerfallMissile missile = GameManager.Instance.PlayerEffectManager.InstantiateSpellMissile(bundleSettings.ElementType);
             missile.Payload = new EntityEffectBundle(bundleSettings);
