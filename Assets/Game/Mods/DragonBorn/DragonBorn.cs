@@ -129,38 +129,32 @@ namespace DragonBorn
             if (!chargingShout)
             {
                 SetWordIndex();
-            }
-
-            if (cooldown == 0.0f)
-            {
-                if (Input.GetKeyDown(KeyCode.Tab))
-                {
-                    printWordofPower(selectedWord.word_A);
-                    cooldown = selectedWord.cooldown_A;
-                    chargingShout = true;
-                }
-            }
-            else
-            {
-                if (chargingShout)
-                {
-                    chargeTimer += Time.deltaTime;
-                    if (Input.GetKeyUp(KeyCode.Tab))
-                    {
-                        prevSelectedIndex = selectedIndex;
-                        DoShout();
-                        chargingShout = false;
-                        chargeTimer = 0.0f;
-                    }
-                }
-                else
+                if (cooldown != 0.0f)
                 {
                     cooldownTimer += Time.deltaTime;
                     if (cooldownTimer > cooldown)
                     {
                         cooldownTimer =  0.0f;
                         cooldown = 0.0f;
+                        chargeTimer = 0.0f;
                     }
+                }
+            }
+
+            if (Input.GetKeyDown(KeyCode.Tab) && cooldown == 0.0f)
+            {
+                printWordofPower(selectedWord.word_A);
+                cooldown = selectedWord.cooldown_A;
+                chargingShout = true;
+            }
+            if (chargingShout)
+            {
+                chargeTimer += Time.deltaTime;
+                if (Input.GetKeyUp(KeyCode.Tab))
+                {
+                    prevSelectedIndex = selectedIndex;
+                    DoShout();
+                    chargingShout = false;
                 }
             }
 
@@ -334,6 +328,12 @@ namespace DragonBorn
             GameManager.Instance.EntityEffectBroker.GetClassicSpellRecord(14, out spell);
             GameManager.Instance.EntityEffectBroker.ClassicSpellRecordDataToEffectBundleSettings(spell, BundleTypes.Spell, out bundleSettings);
 
+            for (int i = 0; i < bundleSettings.Effects.Length; i++)
+            {
+                bundleSettings.Effects[i].Settings.MagnitudeBaseMin = 99999999;
+                bundleSettings.Effects[i].Settings.MagnitudeBaseMax = 99999999;
+            }
+
             DaggerfallMissile missile = GameManager.Instance.PlayerEffectManager.InstantiateSpellMissile(bundleSettings.ElementType);
             missile.Payload = new EntityEffectBundle(bundleSettings);
             Vector3 customAimPosition = player.transform.position + playerCamera.transform.forward;
@@ -352,18 +352,8 @@ namespace DragonBorn
 
             for (int i = 0; i < bundleSettings.Effects.Length; i++)
             {
-                EffectEntry effect = bundleSettings.Effects[i];
-                effect.Settings.DurationBase = 9999;
-                effect.Settings.DurationPlus = 9999;
-                effect.Settings.DurationPerLevel = 9999;
-                effect.Settings.ChanceBase = 9999;
-                effect.Settings.ChancePlus = 9999;
-                effect.Settings.ChancePerLevel = 9999;
-                effect.Settings.MagnitudeBaseMin = 9999;
-                effect.Settings.MagnitudeBaseMax = 9999;
-                effect.Settings.MagnitudePlusMin = 9999;
-                effect.Settings.MagnitudePlusMax = 9999;
-                effect.Settings.MagnitudePerLevel = 9999;
+                bundleSettings.Effects[i].Settings.MagnitudeBaseMin = 99999999;
+                bundleSettings.Effects[i].Settings.MagnitudeBaseMax = 99999999;
             }
 
             DaggerfallMissile missile = GameManager.Instance.PlayerEffectManager.InstantiateSpellMissile(bundleSettings.ElementType);
